@@ -1,58 +1,47 @@
 import streamlit as st
 import numpy as np
-from tensorflow.keras.preprocessing import image
 from tensorflow.keras.models import load_model
-from PIL import Image
+from tensorflow.keras.preprocessing import image
+import json
 
-# ------------------------
-# Load the trained model
-# ------------------------
-MODEL_PATH = "mobilenetv2_model_['Catla', 'CommonCarp', 'Mori', 'Rohu', 'SilverCarp'].h5"
-model = load_model(MODEL_PATH)
+# Page config
+st.set_page_config(page_title="Fish Classifier", page_icon="🐟", layout="centered")
 
-# Class labels (must match training order)
-class_labels = ['Catla', 'CommonCarp', 'Mori', 'Rohu', 'SilverCarp']
-
-# ------------------------
-# Prediction function
-# ------------------------
-def predict_single_image(img, model, class_labels):
-    img = img.resize((300, 300))  # Resize to match model input
-    img_array = np.array(img) / 255.0
-    img_array = np.expand_dims(img_array, axis=0)
-
-    pred_prob = model.predict(img_array)[0]
-    pred_idx = np.argmax(pred_prob)
-
-    return class_labels[pred_idx], pred_prob[pred_idx], pred_prob
-
-# ------------------------
-# Streamlit UI
-# ------------------------
-st.set_page_config(page_title="Fish Species Classifier", page_icon="🐟", layout="centered")
-
+# Title
 st.title("🐟 Fish Species Classifier")
-st.write("Upload an image of a fish, and the model will predict its species.")
+st.write("Upload an image of a fish, and I’ll tell you its species.")
+
+# Load model and class names
+@st.cache_resource
+def load_model_and_labels():
+    model = load_model("mobilenetv2_model.keras")
+    with open("class_names.json", "r") as f:
+        class_names = json.load(f)
+    return model, class_names
+
+model, class_labels = load_model_and_labels()
 
 # File uploader
-uploaded_file = st.file_uploader("Choose an image", type=["jpg", "jpeg", "png"])
+uploaded_file = st.file_uploader("Choose an image...", type=["jpg", "jpeg", "png"])
 
 if uploaded_file is not None:
-    # Open and display image
-    img = Image.open(uploaded_file).convert('RGB')
-    st.image(img, caption="Uploaded Image", use_column_width=True)
+    # Display uploaded image
+    st.image(uploaded_file, caption="Uploaded Image", use_column_width=True)
+
+    # Preprocess image
+    img = image.load_img(uploaded_file, target_size=(224, 224))
+    img_array = image.img_to_array(img) / 255.0
+    img_array = np.expand_dims(img_array, axis=0)
 
     # Prediction
-    with st.spinner("Predicting..."):
-        pred_class, confidence, all_probs = predict_single_image(img, model, class_labels)
+    pred_prob = model.predict(img_array)[0]
+    pred_idx = np.argmax(pred_prob)
+    pred_class = class_labels[pred_idx]
+    confidence = pred_prob[pred_idx] * 100
 
-    # Display results
-    st.markdown(f"### 🏆 Predicted Class: **{pred_class}**")
-    st.markdown(f"**Confidence:** {confidence*100:.2f}%")
+    # Show results
+    st.markdown(f"### 🎯 Prediction: **{pred_class}**")
+    st.markdown(f"### 📊 Confidence: **{confidence:.2f}%**")
 
-    # Show all class probabilities as a bar chart
-    st.subheader("Class Probabilities")
-    prob_dict = {class_labels[i]: float(all_probs[i]) for i in range(len(class_labels))}
-    st.bar_chart(prob_dict)
-else:
-    st.info("Please upload an image to get a prediction.")
+    # Show probability chart
+    st.bar_chart({label: prob for label, prob in zip(class_labels, pred_prob)})
