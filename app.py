@@ -6,7 +6,7 @@ from tensorflow.keras.preprocessing import image
 from PIL import Image
 import os
 
-st.title("🐟 Fish Species Classifier (MobileNetV2)")
+st.title("Fish Species Classifier for ['Catla', 'CommonCarp', 'Mori', 'Rohu', 'SilverCarp']")
 
 # Load class names
 with open("class_names.json", "r") as f:
@@ -19,10 +19,10 @@ def load_keras_model():
     try:
         # Try to load as a full saved model
         model = tf.keras.models.load_model("mobilenetv2_model.keras")
-        st.write("✅ Loaded full model.")
+        # st.write("✅ Loaded full model.")
     except Exception:
         # If that fails, assume weights-only and rebuild architecture
-        st.write("ℹ️ Loading weights-only model...")
+        # st.write("ℹ️ Loading weights-only model...")
         base_model = tf.keras.applications.MobileNetV2(
             include_top=False,
             weights="imagenet",
@@ -36,7 +36,7 @@ def load_keras_model():
             tf.keras.layers.Dense(NUM_CLASSES, activation='softmax')
         ])
         model.load_weights("mobilenetv2_model.keras")
-        st.write("✅ Weights loaded into rebuilt architecture.")
+        # st.write("✅ Weights loaded into rebuilt architecture.")
     return model
 
 model = load_keras_model()
@@ -60,7 +60,7 @@ if uploaded_file is not None:
         confidence = np.max(predictions) * 100
 
     st.success(f"**Predicted:** {predicted_class}")
-    st.info(f"**Confidence:** {confidence:.2f}%")
+    # st.info(f"**Confidence:** {confidence:.2f}%")
 
 
 # streamlit run app.py 
